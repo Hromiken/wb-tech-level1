@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"runtime"
 	"sync"
 )
 
@@ -13,19 +13,19 @@ import (
 func main() {
 	// Вводные данные
 	slice := make([]int, 0, 100)
-	for i := 0; i < 100; i++ {
-		slice = append(slice, i)
+	for i := 0; i < 10_000_000; i++ {
+		slice = append(slice, i*i)
 	}
 
 	// Запускаем ф-ию
-	square(slice)
-
+	//square(slice)
+	fmt.Println(slice)
 }
 
 func square(slice []int) {
 	// ВВОД ДАННЫХ
 	var wg sync.WaitGroup
-	numWorkers := runtime.NumCPU()      // Ограничим кол-во гоуртин кол-вом ядер, чтобы показать Workerpool
+	numWorkers := 2                     // Ограничим кол-во гоуртин кол-вом ядер, чтобы показать Workerpool
 	job := make(chan int, numWorkers*2) // Локальный канал для работы
 
 	// Запускаем отправителя
