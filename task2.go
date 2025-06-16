@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"os"
+	"strconv"
 	"sync"
 )
 
@@ -11,40 +12,51 @@ import (
 */
 
 func main() {
-	// Вводные данные
-	slice := make([]int, 0, 100)
-	for i := 0; i < 10_000_000; i++ {
-		slice = append(slice, i*i)
+	// ЗАГРУЖАЕМ ПЕРЕМЕННУЮ ОКРУЖЕНИЯ
+	workersStr := os.Getenv("WORKERS")
+
+	// Парсим значение
+	workers, err := strconv.Atoi(workersStr)
+	if err != nil {
+		fmt.Printf("Ошибка парсинга WORKERS: %v,\n", err)
 	}
 
-	// Запускаем ф-ию
-	//square(slice)
-	fmt.Println(slice)
-}
+	fmt.Printf("Кол-во workers = %d\n", workers)
 
-func square(slice []int) {
 	// ВВОД ДАННЫХ
-	var wg sync.WaitGroup
-	numWorkers := 2                     // Ограничим кол-во гоуртин кол-вом ядер, чтобы показать Workerpool
-	job := make(chan int, numWorkers*2) // Локальный канал для работы
+	slice := []int{2, 4, 6, 8, 10}
+	chInput := make(chan int)
+	chOutput := make(chan int)
 
-	// Запускаем отправителя
+	// Записываем данные в канал
+	go taskProducer(slice, chInput)
+	// Из одного канала передаем в другой конкуретно
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go square(chInput, chOutput, &wg)
+	}
+	// Конкуретно закрываю и wg.wait
 	go func() {
-		for _, num := range slice {
-			job <- num
-		}
-		close(job)
+		wg.Wait()
+		close(chOutput)
 	}()
 
-	for i := 1; i <= numWorkers; i++ {
-		wg.Add(1)
-		go func(index int) {
-			defer wg.Done()
-			for v := range job {
-				res := v * v
-				log.Printf("Рабочий#%d Квадрат числа (%d) = %v", index, v, res)
-			}
-		}(i)
+	for v := range chOutput {
+		fmt.Println(v)
 	}
-	wg.Wait()
+}
+
+func taskProducer(slice []int, ch chan int) {
+	for _, x := range slice {
+		ch <- x
+	}
+	close(ch)
+}
+
+func square(chInput chan int, OutputCh chan int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for v := range chInput {
+		OutputCh <- v * v
+	}
 }
