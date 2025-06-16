@@ -11,13 +11,13 @@ func TestSquare(t *testing.T) {
 	outCh := make(chan int)
 	var wg sync.WaitGroup
 	wg.Add(1)
+
 	//Act
 	go square(inCh, outCh, &wg)
-
 	// Отправляем значение
 	inCh <- 4
 	close(inCh)
-
+	// Ожидания\реальность
 	if actual := <-outCh; actual != 16 {
 		t.Errorf("got %d, want %d", actual, 16)
 	}
